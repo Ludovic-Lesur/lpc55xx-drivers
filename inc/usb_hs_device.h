@@ -35,11 +35,11 @@ typedef enum {
     USB_HS_DEVICE_ERROR_ENDPOINT_TRANSFER_TYPE,
     USB_HS_DEVICE_ERROR_ENDPOINT_DIRECTION,
     USB_HS_DEVICE_ERROR_ENDPOINT_BUFFER_MODE,
+    USB_HS_DEVICE_ERROR_ENDPOINT_BUSY,
     USB_HS_DEVICE_ERROR_RAM_MALLOC_SIZE,
     USB_HS_DEVICE_ERROR_RAM_MALLOC,
     USB_HS_DEVICE_ERROR_RAM_FREE_ADDRESS,
     USB_HS_DEVICE_ERROR_RAM_FREE_SIZE,
-    USB_HS_DEVICE_ERROR_PACKET_SIZE_OVERFLOW,
     // Low level drivers errors.
     USB_HS_DEVICE_ERROR_BASE_USB_HS_PHY = ERROR_BASE_STEP,
     USB_HS_DEVICE_ERROR_BASE_SYSCON = (USB_HS_DEVICE_ERROR_BASE_USB_HS_PHY + USB_HS_PHY_ERROR_BASE_LAST),
@@ -192,6 +192,7 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_stop(void);
 /*!******************************************************************
  * \fn USB_HS_DEVICE_status_t USB_HS_DEVICE_write(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_in, uint32_t data_in_size)
  * \brief Write data to USB bus.
+ * \brief Warning: Input data pointer must not be modified while the transfer completion callback is not issued.
  * \param[in]   endpoint: Pointer to the physical endpoint to use.
  * \param[in]   data_in: Pointer to the data to write.
  * \param[in]   data_in_size: Number of bytes to write.
