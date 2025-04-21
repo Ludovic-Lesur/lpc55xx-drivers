@@ -105,10 +105,9 @@ typedef struct {
 /*******************************************************************/
 typedef union {
     struct {
-        unsigned in_data_phase_ongoing;
-        unsigned out_data_phase_ongoing;
-        unsigned setup :1;
-        unsigned init :1;
+        uint8_t in_data_phase_ongoing :1;
+        uint8_t out_data_phase_ongoing :1;
+        uint8_t init :1;
     };
     uint8_t all;
 } USB_HS_DEVICE_flags_t;
@@ -203,7 +202,6 @@ static void _USB_HS_DEVICE_control_endpoint_out_irq_callback(uint8_t ep_phy) {
         usb_hs_device_ram_data.ep_cs_list[ep0_in_cs_index].active = 0;
         usb_hs_device_ram_data.ep_cs_list[ep0_in_cs_index].stall = 0;
         // Update local flags.
-        usb_hs_device_ctx.flags.setup = 1;
         usb_hs_device_ctx.flags.out_data_phase_ongoing = 0;
         usb_hs_device_ctx.flags.in_data_phase_ongoing = 0;
         // Clear setup flag.
@@ -824,7 +822,7 @@ errors:
 }
 
 /*******************************************************************/
-USB_HS_DEVICE_status_t USB_HS_DEVICE_write(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_in, uint32_t data_in_size) {
+USB_HS_DEVICE_status_t USB_HS_DEVICE_write_data(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_in, uint32_t data_in_size) {
     // Local variables.
     USB_HS_DEVICE_status_t status = USB_HS_DEVICE_SUCCESS;
     uint8_t ep_phy = 0;
@@ -858,7 +856,7 @@ errors:
 }
 
 /*******************************************************************/
-USB_HS_DEVICE_status_t USB_HS_DEVICE_read(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t** data_out, uint32_t* data_out_size) {
+USB_HS_DEVICE_status_t USB_HS_DEVICE_read_data(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t** data_out, uint32_t* data_out_size) {
     // Local variables.
     USB_HS_DEVICE_status_t status = USB_HS_DEVICE_SUCCESS;
     USB_HS_DEVICE_endpoint_buffer_t ep_buf = USB_HS_DEVICE_ENDPOINT_BUFFER_0;
@@ -878,31 +876,45 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_read(USB_HS_DEVICE_endpoint_t* endpoint, ui
         status = USB_HS_DEVICE_ERROR_NULL_PARAMETER;
         goto errors;
     }
-    // Compute buffer index.
-    if ((endpoint->number) == 0) {
-        // Check setup flag.
-        ep_buf = (usb_hs_device_ctx.flags.setup == 0) ? USB_HS_DEVICE_ENDPOINT_BUFFER_0 : USB_HS_DEVICE_ENDPOINT_BUFFER_1;
-    }
-    else {
+    // Compute buffer index for data endpoints.
+    if ((endpoint->number) != 0) {
         // Check double buffer mode status.
         ep_buf = (((USB_HS_DEVICE->EPINUSE) & (0b1 << ep_phy)) == 0) ? USB_HS_DEVICE_ENDPOINT_BUFFER_1 : USB_HS_DEVICE_ENDPOINT_BUFFER_0;
     }
     // Get RAM address.
     ep_cs_index = USB_HS_DEVICE_RAM_EP_CS_INDEX((endpoint->number), (endpoint->direction), ep_buf);
     ep_ram_data_address = (usb_hs_device_ram_data.ep_cs_list[ep_cs_index].address_offset - USB_HS_DEVICE_RAM_DATA_OFFSET_BLOCKS) << USB_HS_DEVICE_RAM_BLOCK_SIZE_SHIFT;
-    // Fill data.
+    // Update output data.
     (*data_out) = (uint8_t*) &(usb_hs_device_ram_data.data[ep_ram_data_address]);
-    // Compute data size.
-    if (usb_hs_device_ctx.flags.setup != 0) {
-        // NBytes field is not updated for setup packets.
-        (*data_out_size) = USB_HS_DEVICE_SETUP_PACKET_SIZE_BYTES;
-    }
-    else {
-        // RAM buffer has been allocated with the maximum packet size.
-        (*data_out_size) = (endpoint->max_packet_size_bytes - usb_hs_device_ram_data.ep_cs_list[ep_cs_index].n_bytes);
-    }
+    // Compute data size (RAM has been allocated with the maximum packet size).
+    (*data_out_size) = (endpoint->max_packet_size_bytes - usb_hs_device_ram_data.ep_cs_list[ep_cs_index].n_bytes);
 errors:
-    // Clear setup flag.
-    usb_hs_device_ctx.flags.setup = 0;
+    return status;
+}
+
+/*******************************************************************/
+USB_HS_DEVICE_status_t USB_HS_DEVICE_read_setup(uint8_t** setup_out, uint32_t* setup_out_size) {
+    // Local variables.
+    USB_HS_DEVICE_status_t status = USB_HS_DEVICE_SUCCESS;
+    uint8_t ep_cs_index = 0;
+    uint32_t ep_ram_data_address = 0;
+    // Check state.
+    if (usb_hs_device_ctx.flags.init == 0) {
+        status = USB_HS_DEVICE_ERROR_UNINITIALIZED;
+        goto errors;
+    }
+    // Check parameter.
+    if ((setup_out == NULL) || (setup_out_size == NULL)) {
+        status = USB_HS_DEVICE_ERROR_NULL_PARAMETER;
+        goto errors;
+    }
+    // Get RAM address.
+    ep_cs_index = USB_HS_DEVICE_RAM_EP_CS_INDEX(0, USB_HS_DEVICE_ENDPOINT_DIRECTION_OUT, USB_HS_DEVICE_ENDPOINT_BUFFER_1);
+    ep_ram_data_address = (usb_hs_device_ram_data.ep_cs_list[ep_cs_index].address_offset - USB_HS_DEVICE_RAM_DATA_OFFSET_BLOCKS) << USB_HS_DEVICE_RAM_BLOCK_SIZE_SHIFT;
+    // Update output data.
+    (*setup_out) = (uint8_t*) &(usb_hs_device_ram_data.data[ep_ram_data_address]);
+    // Compute data size (NBytes field is not updated for setup packets).
+    (*setup_out_size) = USB_HS_DEVICE_SETUP_PACKET_SIZE_BYTES;
+errors:
     return status;
 }

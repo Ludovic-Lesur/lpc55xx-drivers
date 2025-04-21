@@ -190,8 +190,8 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_start(void);
 USB_HS_DEVICE_status_t USB_HS_DEVICE_stop(void);
 
 /*!******************************************************************
- * \fn USB_HS_DEVICE_status_t USB_HS_DEVICE_write(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_in, uint32_t data_in_size)
- * \brief Write data to USB bus.
+ * \fn USB_HS_DEVICE_status_t USB_HS_DEVICE_write_data(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_in, uint32_t data_in_size)
+ * \brief Write data bytes to USB bus.
  * \brief Warning: Input data pointer must not be modified while the transfer completion callback is not issued.
  * \param[in]   endpoint: Pointer to the physical endpoint to use.
  * \param[in]   data_in: Pointer to the data to write.
@@ -199,17 +199,26 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_stop(void);
  * \param[out]  none
  * \retval      Function execution status.
  *******************************************************************/
-USB_HS_DEVICE_status_t USB_HS_DEVICE_write(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_in, uint32_t data_in_size);
+USB_HS_DEVICE_status_t USB_HS_DEVICE_write_data(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_in, uint32_t data_in_size);
 
 /*!******************************************************************
- * \fn USB_HS_DEVICE_status_t USB_HS_DEVICE_read(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_out, uint32_t* data_out_size)
- * \brief Read data from USB bus.
+ * \fn USB_HS_DEVICE_status_t USB_HS_DEVICE_read_data(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t* data_out, uint32_t* data_out_size)
+ * \brief Read data bytes from USB bus.
  * \param[in]   endpoint: Pointer to the physical endpoint to use.
  * \param[out]  data_out: Pointer to the data to read.
  * \param[out]  data_out_size: Pointer to the number of read bytes.
  * \retval      Function execution status.
  *******************************************************************/
-USB_HS_DEVICE_status_t USB_HS_DEVICE_read(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t** data_out, uint32_t* data_out_size);
+USB_HS_DEVICE_status_t USB_HS_DEVICE_read_data(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t** data_out, uint32_t* data_out_size);
+
+/*!******************************************************************
+ * \fn USB_HS_DEVICE_status_t USB_HS_DEVICE_read_setup(uint8_t** setup_out, uint32_t* setup_out_size)
+ * \brief Read setup bytes from USB bus.
+ * \param[out]  setup_out: Pointer to the setup bytes to read.
+ * \param[out]  setup_out_size: Pointer to the number of read bytes.
+ * \retval      Function execution status.
+ *******************************************************************/
+USB_HS_DEVICE_status_t USB_HS_DEVICE_read_setup(uint8_t** setup_out, uint32_t* setup_out_size);
 
 /*******************************************************************/
 #define USB_HS_DEVICE_exit_error(base) { ERROR_check_exit(usb_hs_device_status, USB_HS_DEVICE_SUCCESS, base) }
