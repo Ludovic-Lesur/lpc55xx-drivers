@@ -44,6 +44,7 @@
 #define USB_HS_DEVICE_RAM_DATA_SIZE_BLOCKS                      ((USB_HS_DEVICE_RAM_DATA_SIZE_BYTES + USB_HS_DEVICE_RAM_BLOCK_SIZE_BYTES - 1) / USB_HS_DEVICE_RAM_BLOCK_SIZE_BYTES)
 #define USB_HS_DEVICE_RAM_DATA_OFFSET_BYTES                     (((uint32_t) &usb_hs_device_ram_data.data[0]) - ((uint32_t) &usb_hs_device_ram_data.ep_cs_list[0]))
 #define USB_HS_DEVICE_RAM_DATA_OFFSET_BLOCKS                    (USB_HS_DEVICE_RAM_DATA_OFFSET_BYTES >> USB_HS_DEVICE_RAM_BLOCK_SIZE_SHIFT)
+#define USB_HS_DEVICE_RAM_DATA_ADDRESS(block)                   ((block - USB_HS_DEVICE_RAM_DATA_OFFSET_BLOCKS) << USB_HS_DEVICE_RAM_BLOCK_SIZE_SHIFT)
 
 #define USB_HS_DEVICE_RAM_MALLOC_TABLE_SIZE_BYTES               (USB_HS_DEVICE_RAM_DATA_SIZE_BLOCKS / MATH_U8_SIZE_BITS)
 
@@ -93,8 +94,7 @@ typedef struct {
     uint8_t registered;
     uint32_t irq_mask;
     uint32_t max_packet_size_bytes;
-    uint32_t address_offset_buffer0;
-    uint32_t address_offset_buffer1;
+    uint32_t address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_LAST];
     uint8_t* dma_data;
     uint32_t dma_transfer_size_bytes;
     uint32_t dma_transfer_count_bytes;
@@ -139,6 +139,7 @@ static void _USB_HS_DEVICE_control_endpoint_out_irq_callback(uint8_t ep_phy);
 static void _USB_HS_DEVICE_control_endpoint_in_irq_callback(uint8_t ep_phy);
 static void _USB_HS_DEVICE_data_endpoint_irq_callback(uint8_t ep_phy);
 static void _USB_HS_DEVICE_write(uint8_t ep_phy, uint8_t ep_num, uint8_t ep_dir);
+static USB_HS_DEVICE_endpoint_buffer_t _USB_HS_DEVICE_get_endpoint_buffer(uint8_t ep_phy);
 
 /*** USB HS DEVICE local functions ***/
 
@@ -242,7 +243,7 @@ static void _USB_HS_DEVICE_control_endpoint_out_irq_callback(uint8_t ep_phy) {
         usb_hs_device_ram_data.ep_cs_list[ep0_out_cs_index].active = 0;
         usb_hs_device_ram_data.ep_cs_list[ep0_out_cs_index].stall = 1;
         usb_hs_device_ram_data.ep_cs_list[ep0_out_cs_index].n_bytes = (usb_hs_device_ctx.physical_endpoints[ep_phy].max_packet_size_bytes);
-        usb_hs_device_ram_data.ep_cs_list[ep0_out_cs_index].address_offset = (usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset_buffer0);
+        usb_hs_device_ram_data.ep_cs_list[ep0_out_cs_index].address_offset = (usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_0]);
         // Call applicative callback.
         if (usb_hs_device_ctx.physical_endpoints[ep_phy].callback != NULL) {
             usb_hs_device_ctx.physical_endpoints[ep_phy].callback();
@@ -276,7 +277,7 @@ static void _USB_HS_DEVICE_control_endpoint_in_irq_callback(uint8_t ep_phy) {
         // Update DMA transfer status.
         usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_count_bytes += usb_hs_device_ctx.physical_endpoints[ep_phy].dma_n_bytes;
         // Address has been incremented by hardware.
-        usb_hs_device_ram_data.ep_cs_list[ep0_in_cs_index].address_offset = (usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset_buffer0);
+        usb_hs_device_ram_data.ep_cs_list[ep0_in_cs_index].address_offset = (usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_0]);
         // Check if all data has been sent.
         if (usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_count_bytes >= usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_size_bytes) {
             // Activate OUT endpoint.
@@ -295,7 +296,7 @@ static void _USB_HS_DEVICE_control_endpoint_in_irq_callback(uint8_t ep_phy) {
         else {
            // Send next packet.
            _USB_HS_DEVICE_write(ep_phy, 0, USB_HS_DEVICE_ENDPOINT_DIRECTION_IN);
-       }
+        }
     }
     else if (usb_hs_device_ctx.flags.out_data_phase_ongoing != 0) {
         // Case of IN ZLP acknowledge.
@@ -316,9 +317,44 @@ static void _USB_HS_DEVICE_control_endpoint_in_irq_callback(uint8_t ep_phy) {
 
 /*******************************************************************/
 static void _USB_HS_DEVICE_data_endpoint_irq_callback(uint8_t ep_phy) {
-    // Call applicative callback if not NULL.
-    if (usb_hs_device_ctx.physical_endpoints[ep_phy].callback != NULL) {
-        usb_hs_device_ctx.physical_endpoints[ep_phy].callback();
+    // Local variables.
+    uint8_t ep_num = USB_HS_DEVICE_EP_NUM(ep_phy);
+    uint8_t ep_dir = USB_HS_DEVICE_EP_DIR(ep_phy);
+    USB_HS_DEVICE_endpoint_buffer_t ep_buffer = _USB_HS_DEVICE_get_endpoint_buffer(ep_phy);
+    uint8_t ep_cs_index = USB_HS_DEVICE_RAM_EP_CS_INDEX(ep_num, ep_dir, ep_buffer);
+    // Check direction.
+    if (ep_dir == USB_HS_DEVICE_ENDPOINT_DIRECTION_OUT) {
+        // Store number of received bytes.
+        usb_hs_device_ctx.physical_endpoints[ep_phy].dma_n_bytes = usb_hs_device_ram_data.ep_cs_list[ep_cs_index].n_bytes;
+        // Prepare OUT endpoint for next reception.
+        usb_hs_device_ram_data.ep_cs_list[ep_cs_index].active = 1;
+        usb_hs_device_ram_data.ep_cs_list[ep_cs_index].address_offset = (usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[ep_buffer]);
+        usb_hs_device_ram_data.ep_cs_list[ep_cs_index].n_bytes = (usb_hs_device_ctx.physical_endpoints[ep_phy].max_packet_size_bytes);
+        // Call applicative callback if not NULL.
+        if (usb_hs_device_ctx.physical_endpoints[ep_phy].callback != NULL) {
+            usb_hs_device_ctx.physical_endpoints[ep_phy].callback();
+        }
+    }
+    else {
+        // Update DMA transfer status.
+        usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_count_bytes += usb_hs_device_ctx.physical_endpoints[ep_phy].dma_n_bytes;
+        // Address has been incremented by hardware.
+        usb_hs_device_ram_data.ep_cs_list[ep_cs_index].address_offset = (usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[ep_buffer]);
+        // Check if all data has been sent.
+        if (usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_count_bytes >= usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_size_bytes) {
+            // Reset IN endpoint for next transmission.
+            usb_hs_device_ram_data.ep_cs_list[ep_cs_index].active = 0;
+            usb_hs_device_ram_data.ep_cs_list[ep_cs_index].stall = 1;
+            usb_hs_device_ram_data.ep_cs_list[ep_cs_index].n_bytes = 0;
+            // Call applicative callback.
+            if (usb_hs_device_ctx.physical_endpoints[ep_phy].callback != NULL) {
+                usb_hs_device_ctx.physical_endpoints[ep_phy].callback();
+            }
+        }
+        else {
+           // Send next packet.
+           _USB_HS_DEVICE_write(ep_phy, ep_num, USB_HS_DEVICE_ENDPOINT_DIRECTION_IN);
+        }
     }
 }
 
@@ -429,8 +465,8 @@ static void _USB_HS_DEVICE_reset_endpoint(uint8_t ep_phy) {
     usb_hs_device_ctx.physical_endpoints[ep_phy].registered = 0;
     usb_hs_device_ctx.physical_endpoints[ep_phy].irq_mask = 0;
     usb_hs_device_ctx.physical_endpoints[ep_phy].max_packet_size_bytes = 0;
-    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset_buffer0 = 0;
-    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset_buffer1 = 0;
+    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_0] = 0;
+    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_1] = 0;
     usb_hs_device_ctx.physical_endpoints[ep_phy].dma_data = NULL;
     usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_count_bytes = 0;
     usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_size_bytes = 0;
@@ -468,6 +504,17 @@ static USB_HS_DEVICE_status_t _USB_HS_DEVICE_check_endpoint(USB_HS_DEVICE_endpoi
     }
 errors:
     return status;
+}
+
+/*******************************************************************/
+static USB_HS_DEVICE_endpoint_buffer_t _USB_HS_DEVICE_get_endpoint_buffer(uint8_t ep_phy) {
+    // Local variables.
+    USB_HS_DEVICE_endpoint_buffer_t ep_buffer = USB_HS_DEVICE_ENDPOINT_BUFFER_0;
+    // Check endpoint number.
+    if (USB_HS_DEVICE_EP_NUM(ep_phy) != 0) {
+        ep_buffer = (((USB_HS_DEVICE->EPINUSE) & (0b1 << ep_phy)) == 0) ? USB_HS_DEVICE_ENDPOINT_BUFFER_1 : USB_HS_DEVICE_ENDPOINT_BUFFER_0;
+    }
+    return ep_buffer;
 }
 
 /*******************************************************************/
@@ -591,6 +638,10 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_reset(void) {
     for (idx = 0; idx < USB_HS_DEVICE_NUMBER_OF_PHYSICAL_ENDPOINTS; idx++) {
         _USB_HS_DEVICE_reset_endpoint(idx);
     }
+    // Reset ZLP.
+    for (idx = 0; idx < USB_HS_DEVICE_RAM_BLOCK_SIZE_BYTES; idx++) {
+        usb_hs_device_ram_data.zlp[idx] = 0x00;
+    }
     // Free all USB RAM.
     status = _USB_HS_DEVICE_ram_free(0, USB_HS_DEVICE_RAM_DATA_SIZE_BYTES);
     if (status != USB_HS_DEVICE_SUCCESS) goto errors;
@@ -706,8 +757,8 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_register_endpoint(USB_HS_DEVICE_endpoint_t*
     usb_hs_device_ctx.physical_endpoints[ep_phy].registered = 1;
     usb_hs_device_ctx.physical_endpoints[ep_phy].irq_mask = (0b1 << ep_phy);
     usb_hs_device_ctx.physical_endpoints[ep_phy].max_packet_size_bytes = (endpoint->max_packet_size_bytes);
-    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset_buffer0 = usb_hs_device_ram_data.ep_cs_list[ep_cs_buffer0_index].address_offset;
-    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset_buffer1 = usb_hs_device_ram_data.ep_cs_list[ep_cs_buffer1_index].address_offset;
+    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_0] = usb_hs_device_ram_data.ep_cs_list[ep_cs_buffer0_index].address_offset;
+    usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_1] = usb_hs_device_ram_data.ep_cs_list[ep_cs_buffer1_index].address_offset;
     usb_hs_device_ctx.physical_endpoints[ep_phy].dma_data = NULL;
     usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_count_bytes = 0;
     usb_hs_device_ctx.physical_endpoints[ep_phy].dma_transfer_size_bytes = 0;
@@ -859,10 +910,8 @@ errors:
 USB_HS_DEVICE_status_t USB_HS_DEVICE_read_data(USB_HS_DEVICE_endpoint_t* endpoint, uint8_t** data_out, uint32_t* data_out_size) {
     // Local variables.
     USB_HS_DEVICE_status_t status = USB_HS_DEVICE_SUCCESS;
-    USB_HS_DEVICE_endpoint_buffer_t ep_buf = USB_HS_DEVICE_ENDPOINT_BUFFER_0;
     uint8_t ep_phy = USB_HS_DEVICE_EP_PHY((endpoint->number), (endpoint->direction));
-    uint8_t ep_cs_index = 0;
-    uint32_t ep_ram_data_address = 0;
+    uint32_t ep_ram_data_address = USB_HS_DEVICE_RAM_DATA_ADDRESS(usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[_USB_HS_DEVICE_get_endpoint_buffer(ep_phy)]);
     // Check state.
     if (usb_hs_device_ctx.flags.init == 0) {
         status = USB_HS_DEVICE_ERROR_UNINITIALIZED;
@@ -876,18 +925,10 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_read_data(USB_HS_DEVICE_endpoint_t* endpoin
         status = USB_HS_DEVICE_ERROR_NULL_PARAMETER;
         goto errors;
     }
-    // Compute buffer index for data endpoints.
-    if ((endpoint->number) != 0) {
-        // Check double buffer mode status.
-        ep_buf = (((USB_HS_DEVICE->EPINUSE) & (0b1 << ep_phy)) == 0) ? USB_HS_DEVICE_ENDPOINT_BUFFER_1 : USB_HS_DEVICE_ENDPOINT_BUFFER_0;
-    }
-    // Get RAM address.
-    ep_cs_index = USB_HS_DEVICE_RAM_EP_CS_INDEX((endpoint->number), (endpoint->direction), ep_buf);
-    ep_ram_data_address = (usb_hs_device_ram_data.ep_cs_list[ep_cs_index].address_offset - USB_HS_DEVICE_RAM_DATA_OFFSET_BLOCKS) << USB_HS_DEVICE_RAM_BLOCK_SIZE_SHIFT;
     // Update output data.
     (*data_out) = (uint8_t*) &(usb_hs_device_ram_data.data[ep_ram_data_address]);
     // Compute data size (RAM has been allocated with the maximum packet size).
-    (*data_out_size) = (endpoint->max_packet_size_bytes - usb_hs_device_ram_data.ep_cs_list[ep_cs_index].n_bytes);
+    (*data_out_size) = (endpoint->max_packet_size_bytes - usb_hs_device_ctx.physical_endpoints[ep_phy].dma_n_bytes);
 errors:
     return status;
 }
@@ -896,8 +937,8 @@ errors:
 USB_HS_DEVICE_status_t USB_HS_DEVICE_read_setup(uint8_t** setup_out, uint32_t* setup_out_size) {
     // Local variables.
     USB_HS_DEVICE_status_t status = USB_HS_DEVICE_SUCCESS;
-    uint8_t ep_cs_index = 0;
-    uint32_t ep_ram_data_address = 0;
+    uint8_t ep_phy = USB_HS_DEVICE_EP_PHY(0, USB_HS_DEVICE_ENDPOINT_DIRECTION_OUT);
+    uint32_t ep_ram_data_address = USB_HS_DEVICE_RAM_DATA_ADDRESS(usb_hs_device_ctx.physical_endpoints[ep_phy].address_offset[USB_HS_DEVICE_ENDPOINT_BUFFER_1]);
     // Check state.
     if (usb_hs_device_ctx.flags.init == 0) {
         status = USB_HS_DEVICE_ERROR_UNINITIALIZED;
@@ -908,9 +949,6 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_read_setup(uint8_t** setup_out, uint32_t* s
         status = USB_HS_DEVICE_ERROR_NULL_PARAMETER;
         goto errors;
     }
-    // Get RAM address.
-    ep_cs_index = USB_HS_DEVICE_RAM_EP_CS_INDEX(0, USB_HS_DEVICE_ENDPOINT_DIRECTION_OUT, USB_HS_DEVICE_ENDPOINT_BUFFER_1);
-    ep_ram_data_address = (usb_hs_device_ram_data.ep_cs_list[ep_cs_index].address_offset - USB_HS_DEVICE_RAM_DATA_OFFSET_BLOCKS) << USB_HS_DEVICE_RAM_BLOCK_SIZE_SHIFT;
     // Update output data.
     (*setup_out) = (uint8_t*) &(usb_hs_device_ram_data.data[ep_ram_data_address]);
     // Compute data size (NBytes field is not updated for setup packets).
