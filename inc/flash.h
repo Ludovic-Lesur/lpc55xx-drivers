@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __FLASH_H__
 #define __FLASH_H__
 
@@ -47,3 +53,5 @@ FLASH_status_t FLASH_set_latency(uint8_t wait_states);
 #define FLASH_stack_exit_error(base, code) { ERROR_check_stack_exit(flash_status, FLASH_SUCCESS, base, code) }
 
 #endif /* __FLASH_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

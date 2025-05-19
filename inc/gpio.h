@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __GPIO_H__
 #define __GPIO_H__
 
@@ -128,3 +134,5 @@ uint8_t GPIO_read(const GPIO_pin_t* gpio);
 void GPIO_toggle(const GPIO_pin_t* gpio);
 
 #endif /* __GPIO_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

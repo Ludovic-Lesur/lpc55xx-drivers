@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #include "usb_hs_device.h"
 
 #include "error.h"
@@ -962,3 +968,5 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_read_setup(uint8_t** setup_out, uint32_t* s
 errors:
     return status;
 }
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

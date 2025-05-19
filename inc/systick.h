@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __SYSTICK_H__
 #define __SYSTICK_H__
 
@@ -99,3 +105,5 @@ SYSTICK_status_t SYSTICK_delay_microseconds(uint32_t delay_us);
 #define SYSTICK_stack_exit_error(base, code) { ERROR_check_stack_exit(systick_status, SYSTICK_SUCCESS, base, code) }
 
 #endif /* __SYSTICK_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

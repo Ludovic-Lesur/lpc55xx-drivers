@@ -5,11 +5,14 @@
  *      Author: Ludo
  */
 
-#include "syscon.h"
-
 #ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
 #include "lpc55xx_drivers_flags.h"
 #endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
+#include "syscon.h"
+
 #include "anactrl.h"
 #include "error.h"
 #include "flash.h"
@@ -714,3 +717,5 @@ SYSCON_status_t SYSCON_set_clkout(SYSCON_clock_t clock, uint16_t divider, const 
 errors:
     return status;
 }
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

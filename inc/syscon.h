@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __SYSCON_H__
 #define __SYSCON_H__
 
@@ -259,3 +265,5 @@ SYSCON_status_t SYSCON_set_clkout(SYSCON_clock_t clock, uint16_t divider, const 
 #define SYSCON_stack_exit_error(base, code) { ERROR_check_stack_exit(syscon_status, SYSCON_SUCCESS, base, code) }
 
 #endif /* __SYSCON_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

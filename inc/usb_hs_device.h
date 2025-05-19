@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __USB_HS_DEVICE_H__
 #define __USB_HS_DEVICE_H__
 
@@ -230,3 +236,5 @@ USB_HS_DEVICE_status_t USB_HS_DEVICE_read_setup(uint8_t** setup_out, uint32_t* s
 #define USB_HS_DEVICE_stack_exit_error(base, code) { ERROR_check_stack_exit(usb_hs_device_status, USB_HS_DEVICE_SUCCESS, base, code) }
 
 #endif /* __USB_HS_DEVICE_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

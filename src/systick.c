@@ -5,11 +5,14 @@
  *      Author: Ludo
  */
 
-#include "systick.h"
-
 #ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
 #include "lpc55xx_drivers_flags.h"
 #endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
+#include "systick.h"
+
 #include "error.h"
 #include "maths.h"
 #include "nvic.h"
@@ -217,3 +220,5 @@ SYSTICK_status_t SYSTICK_delay_microseconds(uint32_t delay_us) {
 errors:
     return status;
 }
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

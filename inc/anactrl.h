@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __ANACTRL_H__
 #define __ANACTRL_H__
 
@@ -116,3 +122,5 @@ ANACTRL_status_t ANACTRL_get_xo32m_status(uint8_t* xo32m_is_ready);
 #define ANACTRL_stack_exit_error(base, code) { ERROR_check_stack_exit(anactrl_status, ANACTRL_SUCCESS, base, code) }
 
 #endif /* __ANACTRL_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

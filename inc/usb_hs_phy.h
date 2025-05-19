@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __USB_HS_PHY_H__
 #define __USB_HS_PHY_H__
 
@@ -63,3 +69,5 @@ USB_HS_PHY_status_t USB_HS_PHY_de_init(void);
 #define USB_HS_PHY_stack_exit_error(base, code) { ERROR_check_stack_exit(usb_hs_phy_status, USB_HS_PHY_SUCCESS, base, code) }
 
 #endif /* __USB_HS_PHY_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

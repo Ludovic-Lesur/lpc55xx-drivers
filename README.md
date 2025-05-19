@@ -21,5 +21,6 @@ Here is the versions compatibility table:
 | **Flag name** | **Value** | **Description** |
 |:---:|:---:|:---:|
 | `LPC55XX_DRIVERS_DISABLE_FLAGS_FILE` | `defined` / `undefined` | Disable the `lpc55xx_drivers_flags.h` header file inclusion when compilation flags are given in the project settings or by command line. |
+| `LPC55XX_DRIVERS_DISABLE` | `defined` / `undefined` | Disable the LPC55xx drivers. |
 | `LPC55XX_DRIVERS_SYSCON_XO32M_FREQUENCY_HZ` | `<value>` | Defines the external high speed crystal frequency in Hz. |
 | `LPC55XX_DRIVERS_SYSCON_XTAL32K_FREQUENCY_HZ` | `<value>` | Defines the external low speed crystal frequency in Hz. |

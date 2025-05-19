@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #include "usb_hs_phy.h"
 
 #include "anactrl.h"
@@ -98,3 +104,5 @@ USB_HS_PHY_status_t USB_HS_PHY_de_init(void) {
 errors:
     return status;
 }
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

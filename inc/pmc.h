@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #ifndef __PMC_H__
 #define __PMC_H__
 
@@ -119,3 +125,5 @@ PMC_status_t PMC_get_32k_osc_status(uint8_t* oscillator_is_ready);
 #define PMC_stack_exit_error(base, code) { ERROR_check_stack_exit(pmc_status, PMC_SUCCESS, base, code) }
 
 #endif /* __PMC_H__ */
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

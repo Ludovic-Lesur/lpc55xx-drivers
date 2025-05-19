@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #include "nvic.h"
 
 #include "nvic_registers.h"
@@ -74,3 +80,5 @@ void NVIC_clear_pending_interrupt(NVIC_interrupt_t irq_index) {
 errors:
     return;
 }
+
+#endif /* LPC55XX_DRIVERS_DISABLE */

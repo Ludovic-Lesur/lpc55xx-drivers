@@ -5,6 +5,12 @@
  *      Author: Ludo
  */
 
+#ifndef LPC55XX_DRIVERS_DISABLE_FLAGS_FILE
+#include "lpc55xx_drivers_flags.h"
+#endif
+
+#ifndef LPC55XX_DRIVERS_DISABLE
+
 #include "gpio.h"
 
 #include "gpio_registers.h"
@@ -185,3 +191,5 @@ void GPIO_toggle(const GPIO_pin_t* gpio) {
     // Write bit to toggle pin.
     GPIO->NOT[gpio->port] |= (0b1 << (gpio->pin));
 }
+
+#endif /* LPC55XX_DRIVERS_DISABLE */
