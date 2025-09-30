@@ -65,6 +65,7 @@
 
 /*******************************************************************/
 typedef union {
+    uint32_t value;
     struct {
         unsigned address_offset :11;
         unsigned n_bytes :15;
@@ -75,7 +76,6 @@ typedef union {
         unsigned disable :1;
         unsigned active :1;
     } __attribute__((scalar_storage_order("little-endian"))) __attribute__((packed));
-    uint32_t value;
 } USB_HS_DEVICE_endpoint_command_status_t;
 
 /*******************************************************************/
@@ -117,12 +117,12 @@ typedef struct {
 
 /*******************************************************************/
 typedef union {
+    uint8_t all;
     struct {
         uint8_t in_data_phase_ongoing :1;
         uint8_t out_data_phase_ongoing :1;
         uint8_t init :1;
-    };
-    uint8_t all;
+    } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } USB_HS_DEVICE_flags_t;
 
 /*******************************************************************/
