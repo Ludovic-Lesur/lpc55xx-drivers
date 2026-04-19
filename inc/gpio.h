@@ -33,7 +33,7 @@ typedef struct {
  * \brief GPIO modes list.
  *******************************************************************/
 typedef enum {
-    GPIO_MODE_ANALOG_INPUT,
+    GPIO_MODE_ANALOG_INPUT = 0,
     GPIO_MODE_DIGITAL_INPUT,
     GPIO_MODE_DIGITAL_INPUT_INVERTED,
     GPIO_MODE_DIGITAL_OUTPUT,
